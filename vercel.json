@@ -2,11 +2,10 @@
   "version": 2,
   "cleanUrls": true,
   "trailingSlash": false,
-  "renders": [],
   "rewrites": [
     {
-      "source": "/(.*)",
-      "destination": "/$1"
+      "source": "/post",
+      "destination": "/post.html"
     }
   ],
   "headers": [
