@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+    <title>FILMIXO | The Harvard of Movie Analysis 🕵️</title>
+    <meta name="description" content="FILMIXO is your ultimate destination for HD movie downloads, expert reviews, and latest cinema updates. Explore professional analysis and trending blockbusters.">
+    <meta name="keywords" content="movies, hd reviews, cinema, blockbuster, filmixo, download, streaming, analysis">
+    <meta name="google-site-verification" content="7mf-JoFsAUYSMwh3438cVMiSN-WZ9VYu8QqrjCXmksM">
+
+    <!-- DNS Prefetch & Preconnect -->
+    <link rel="dns-prefetch" href="https://gstatic.com">
+    <link rel="dns-prefetch" href="https://firestore.googleapis.com">
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+
+    <link rel="preconnect" href="https://gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <!-- Preload Critical Assets -->
+    <link rel="preload" as="image" href="https://filmixo.vercel.app/thumbel/filmixo.jpeg" fetchpriority="high">
+    <link rel="preload" href="/assets/css/main.css" as="style">
+    <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" as="style">
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Alex+Brush&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="/assets/css/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://filmixo.github.io/movie/">
+    <meta property="og:title" content="FILMIXO - Watch & Download Latest HD Movies">
+    <meta property="og:description" content="FILMIXO is your ultimate destination for HD movie downloads and expert reviews.">
+    <meta property="og:image" content="https://filmixo.vercel.app/thumbel/filmixo.jpeg">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="https://filmixo.github.io/movie/">
+    <meta name="twitter:title" content="FILMIXO - Watch & Download Latest HD Movies">
+    <meta name="twitter:description" content="FILMIXO is your ultimate destination for HD movie downloads and expert reviews.">
+    <meta name="twitter:image" content="https://filmixo.vercel.app/thumbel/filmixo.jpeg">
+
+    <!-- Additional Meta Tags -->
+    <link rel="sitemap" type="application/xml" title="Sitemap" href="https://filmixo.github.io/movie/sitemap.xml">
+    <link rel="search" type="application/opensearchdescription+xml" title="FILMIXO Search" href="https://filmixo.github.io/movie/index.html?search={search_term_string}">
+    
+    <!-- JSON-LD Schema -->
+    <script type="application/ld+json" id="homepage-schema"></script>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Header Component Injection Point -->
+        <div id="header-container"></div>
+
+        <!-- Status Bar Section -->
+        <div class="status-section-area">
+            <div class="compact-stats">
+                <div class="stat-left">
+                    <i class="fas fa-database" style="color:var(--acc);font-size:14px;"></i>
+                    <span>Total: <b id="total-count">0</b></span>
+                </div>
+                <div class="stat-center">
+                    <span>🎬 <b>FILMIXO</b> Premium Cinema</span>
+                </div>
+                <div class="stat-right">
+                    <span>Showing: <b id="displayed-count">0</b></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cover Photo with Cinematic Intro -->
+        <div class="cover-photo">
+            <div class="intro-text">FILMIXO</div>
+        </div>
+
+        <!-- Section Title -->
+        <div class="section-title-bar">
+            <div class="title-divider">
+                <span>🎥 Latest Releases</span>
+            </div>
+        </div>
+
+        <!-- Main Feed Container (Standard Cards) -->
+        <div id="feed-container"></div>
+
+        <!-- Load More Section -->
+        <div id="load-more-section" style="display:flex;justify-content:center;padding:40px 20px;">
+            <button id="manual-load-btn" onclick="handleManualLoad()">
+                🎬 Load Movies
+            </button>
+        </div>
+
+        <!-- Infinite Scroll Sentinel -->
+        <div id="sentinel" style="display:none;padding:30px;text-align:center;color:var(--g);font-size:14px;">
+            <div class="spinner"></div>
+            <p style="margin-top:15px;">Loading more content...</p>
+        </div>
+
+        <!-- Footer Component Injection Point -->
+        <div id="footer-container"></div>
+    </div>
+
+    <!-- Core Engine (Firebase + Utilities) -->
+    <script type="module" src="/assets/js/core-engine.js"></script>
+    
+    <!-- Home Manager (Feed + Infinite Scroll) -->
+    <script type="module" src="/assets/js/home-manager.js"></script>
+</body>
+</html>
