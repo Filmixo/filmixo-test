@@ -34,3 +34,6 @@ const db = getFirestore(app);
 // Export for use in other files
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 export { db, collection, getDocs, doc, getDoc, query, orderBy, limit };
+
+
+
