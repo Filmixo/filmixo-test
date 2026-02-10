@@ -1,5 +1,5 @@
 /* ========================================
-   FILMIXO - Post Manager
+   FILMIXO - Post Manager (FIXED VERSION)
    Single Post Loading & Dynamic SEO
    ======================================== */
 
@@ -19,43 +19,97 @@ function getPostIdFromUrl() {
 // ========== FETCH POST DATA ==========
 async function fetchPost(id) {
     try {
+        console.log('🔍 Fetching post with ID:', id);
+        
+        // Session cache check করছি
         const cachedData = sessionStorage.getItem('current_post_data');
         
         if (cachedData) {
+            console.log('📦 Found post in session storage');
             const post = JSON.parse(cachedData);
+            
+            // Document ID বা slug match করছে কিনা চেক করছি
             if (post.id === id || window.generateSlug(post.title) === id) {
-                console.log('Loading post from session cache');
+                console.log('✅ Post loaded from session cache');
                 return post;
+            } else {
+                console.log('⚠️ Session cache ID mismatch');
+                console.log('   Cached ID:', post.id);
+                console.log('   Requested ID:', id);
             }
         }
 
-        console.log('Fetching post from Firebase');
+        console.log('🌐 Fetching from Firebase...');
+        console.log('📂 Collection: "posts"');
+        console.log('📄 Document ID:', id);
+        
         const docRef = doc(db, "posts", id);
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-            return { id: docSnap.id, ...docSnap.data() };
+            console.log('✅ Document found in Firebase');
+            const postData = { id: docSnap.id, ...docSnap.data() };
+            console.log('📊 Post data:', postData);
+            return postData;
+        } else {
+            console.warn('⚠️ Document NOT found with ID:', id);
+            console.warn('🔍 Possible reasons:');
+            console.warn('   1. Document ID টা ভুল হতে পারে');
+            console.warn('   2. URL slug থেকে document ID convert হচ্ছে না');
+            console.warn('   3. Firebase এ এই ID এর document নেই');
         }
         
         return null;
 
     } catch (error) {
-        console.error('Error fetching post:', error);
+        console.error('❌ ERROR fetching post:', error);
+        console.error('Error code:', error.code);
+        console.error('Error message:', error.message);
+        
+        if (error.code === 'permission-denied') {
+            console.error('🚫 Firestore Rules: Read permission denied!');
+        }
+        
         return null;
     }
 }
 
 // ========== RENDER POST CONTENT ==========
 function renderPost(post) {
+    console.log('🎨 Rendering post:', post.title);
+    
     currentPost = post;
 
     const appWrapper = document.getElementById('app-wrapper');
-    if (!appWrapper) return;
+    if (!appWrapper) {
+        console.error('❌ app-wrapper element not found!');
+        return;
+    }
+
+    // Field validation and fallbacks
+    const title = post.title || 'Untitled Movie';
+    const mediaImage = post.mediaImage || 'https://via.placeholder.com/800x450/1a1a1a/ffffff?text=No+Image';
+    
+    // paragraphs array কে content হিসেবে convert করছি
+    let contentHtml = '';
+    if (post.paragraphs && Array.isArray(post.paragraphs)) {
+        console.log('✅ Paragraphs found:', post.paragraphs.length);
+        contentHtml = post.paragraphs.map(p => `<p>${p}</p>`).join('');
+    } else if (post.description) {
+        console.log('✅ Using description field');
+        contentHtml = `<p>${post.description}</p>`;
+    } else if (post.content) {
+        console.log('✅ Using content field');
+        contentHtml = post.content;
+    } else {
+        console.warn('⚠️ No content found in post');
+        contentHtml = '<p>No content available for this movie.</p>';
+    }
 
     const postHtml = `
         <div class="article-section">
             <div class="video-container" onclick="handleVideoClick()">
-                <img id="main-img" src="${post.mediaImage}" alt="${post.title}" loading="eager">
+                <img id="main-img" src="${mediaImage}" alt="${title}" loading="eager">
                 <div style="position:absolute;inset:0;background:rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;cursor:pointer;">
                     <svg viewBox="0 0 512 512" style="width:80px;height:80px;fill:var(--acc);filter:drop-shadow(0 4px 10px rgba(0,0,0,0.5));">
                         <path d="M256 8C119 8 8 119 8 256s111 248 248 248 248-111 248-248S393 8 256 8zm115.7 272l-176 101c-15.8 8.8-35.7-2.5-35.7-21V152c0-18.4 19.8-29.8 35.7-21l176 107c16.4 9.2 16.4 32.9 0 42z"/>
@@ -71,12 +125,12 @@ function renderPost(post) {
 
             <div id="ad-box-title" class="ad-container"></div>
 
-            <h1 class="article-title">${post.title}</h1>
+            <h1 class="article-title">${title}</h1>
 
             <div id="ad-box-p1" class="ad-container"></div>
 
             <div class="article-content">
-                ${post.description || post.content || ''}
+                ${contentHtml}
             </div>
 
             <div id="ad-box-mid" class="ad-container"></div>
@@ -117,16 +171,18 @@ function renderPost(post) {
     `;
 
     appWrapper.innerHTML = postHtml;
+    console.log('✅ Post HTML rendered');
 
     const timeSlot = document.getElementById('status-time-slot');
     if (timeSlot && post.uploadTime) {
+        const uploadTime = new Date(post.uploadTime).getTime();
         timeSlot.innerHTML = `
             <svg viewBox="0 0 512 512" style="width:12px;height:12px;fill:var(--acc);margin-right:5px;vertical-align:middle;">
                 <path d="M256 8C119 8 8 119 8 256s111 248 248 248 248-111 248-248S393 8 256 8zm0 448c-110.5 0-200-89.5-200-200S145.5 56 256 56s200 89.5 200 200-89.5 200-200 200zm61.8-104.4l-84.9-61.7c-3.1-2.3-4.9-5.9-4.9-9.7V116c0-6.6 5.4-12 12-12h32c6.6 0 12 5.4 12 12v141.7l66.8 48.6c5.4 3.9 6.5 11.4 2.6 16.8L334 337.7c-3.9 5.3-11.4 6.5-16.2 2.7z"/>
             </svg>
-            <span style="color:var(--acc);font-weight:900;">${window.timeAgo(post.uploadTime)}</span>
+            <span style="color:var(--acc);font-weight:900;">${window.timeAgo(uploadTime)}</span>
         `;
-        timeElements = [{ el: timeSlot.querySelector('span'), date: post.uploadTime }];
+        timeElements = [{ el: timeSlot.querySelector('span'), date: uploadTime }];
     }
 
     const img = document.getElementById('main-img');
@@ -141,6 +197,8 @@ function renderPost(post) {
 
 // ========== GENERATE POST SEO ==========
 function generatePostSEO(post) {
+    console.log('🔖 Generating SEO for:', post.title);
+    
     const titleVariations = [
         `${post.title} | FILMIXO Professional Analysis 🎬`,
         `${post.title} - Expert Review & HD Download | FILMIXO`,
@@ -271,24 +329,55 @@ function startTimeUpdateLoop() {
 
 // ========== MAIN INITIALIZATION ==========
 async function initPostPage() {
+    console.log('📄 ========================================');
+    console.log('📄 FILMIXO Post Page Initialization');
+    console.log('📄 ========================================');
+    
     postId = getPostIdFromUrl();
 
     if (!postId) {
+        console.error('❌ No post ID in URL!');
+        console.log('🔙 Redirecting to homepage...');
         window.location.href = '/';
         return;
     }
 
+    console.log('📄 Post ID from URL:', postId);
+
     try {
-        console.log('Loading post:', postId);
-        
         const post = await fetchPost(postId);
 
         if (!post) {
-            console.error('Post not found');
-            window.location.href = '/';
+            console.error('❌ Post not found!');
+            console.error('🔍 Check করো:');
+            console.error('   1. Firebase এ এই document ID টা আছে কিনা');
+            console.error('   2. Firestore rules allow read করে কিনা');
+            console.log('🔙 Redirecting to homepage...');
+            
+            // User-friendly error message দেখাই
+            const appWrapper = document.getElementById('app-wrapper');
+            if (appWrapper) {
+                appWrapper.innerHTML = `
+                    <div style="text-align:center;padding:80px 20px;">
+                        <h1 style="color:var(--acc);margin-bottom:20px;">⚠️ Post Not Found</h1>
+                        <p style="color:var(--g);margin-bottom:30px;">
+                            The requested post could not be found.
+                        </p>
+                        <a href="/" style="display:inline-block;padding:12px 30px;background:var(--acc);color:var(--bg);border-radius:8px;text-decoration:none;font-weight:600;">
+                            ← Back to Home
+                        </a>
+                    </div>
+                `;
+            }
+            
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 3000);
             return;
         }
 
+        console.log('✅ Post loaded successfully:', post.title);
+        
         renderPost(post);
         generatePostSEO(post);
         restoreScrollPosition();
@@ -299,10 +388,30 @@ async function initPostPage() {
         }
 
         setTimeout(startTimeUpdateLoop, 2000);
+        
+        console.log('✅ Post page initialization complete!');
 
     } catch (error) {
-        console.error('Post page initialization error:', error);
-        window.location.href = '/';
+        console.error('❌ CRITICAL ERROR during post page initialization:', error);
+        console.error('Error stack:', error.stack);
+        
+        const appWrapper = document.getElementById('app-wrapper');
+        if (appWrapper) {
+            appWrapper.innerHTML = `
+                <div style="text-align:center;padding:80px 20px;">
+                    <h1 style="color:#ff4444;margin-bottom:20px;">❌ Error Loading Post</h1>
+                    <p style="color:var(--g);margin-bottom:15px;">${error.message}</p>
+                    <p style="color:var(--g);font-size:13px;">Check console for details</p>
+                    <a href="/" style="display:inline-block;margin-top:30px;padding:12px 30px;background:var(--acc);color:var(--bg);border-radius:8px;text-decoration:none;font-weight:600;">
+                        ← Back to Home
+                    </a>
+                </div>
+            `;
+        }
+        
+        setTimeout(() => {
+            window.location.href = '/';
+        }, 5000);
     }
 }
 
@@ -329,5 +438,4 @@ export {
     generatePostSEO 
 };
 
-console.log('📄 FILMIXO Post Manager Loaded');
-
+console.log('📄 FILMIXO Post Manager Loaded Successfully');
