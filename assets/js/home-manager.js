@@ -21,12 +21,14 @@ async function fetchAllPosts() {
         
         if (cachedPosts && cachedPosts.length > 0) {
             console.log('Loading posts from cache');
-            allPosts = cachedPosts.sort((a, b) => b.uploadTime - a.uploadTime);
+            // String Date কে সর্টিং করার জন্য Date Object এ রূপান্তর করা হয়েছে
+            allPosts = cachedPosts.sort((a, b) => new Date(b.uploadTime) - new Date(a.uploadTime));
             return allPosts;
         }
 
         console.log('Fetching posts from Firebase');
         const postsCollection = collection(db, "posts");
+        // uploadTime অনুযায়ী ডাটা কুয়েরি
         const q = query(postsCollection, orderBy("uploadTime", "desc"));
         const querySnapshot = await getDocs(q);
 
@@ -48,17 +50,25 @@ async function fetchAllPosts() {
 function renderPostCard(post) {
     const card = document.createElement('div');
     card.className = 'post-card';
+    
+    // ডাটাবেজ ফিল্ড ম্যাপিং
+    const image = post.mediaImage || '';
+    const title = post.title || 'Untitled';
+    // paragraphs অ্যারের প্রথম অংশ ডেসক্রিপশন হিসেবে ব্যবহার
+    const excerpt = post.paragraphs ? post.paragraphs[0].substring(0, 120) + '...' : 'Discover this cinematic masterpiece...';
+    const date = post.uploadTime ? window.timeAgo(new Date(post.uploadTime).getTime()) : 'Recently';
+
     card.innerHTML = `
-        <div class="media-container" onclick="window.savePostData(${JSON.stringify(post).replace(/"/g, '&quot;')}); window.navigateToPost('${post.id}', '${post.title}');">
-            <img data-src="${post.mediaImage}" alt="${post.title}" loading="lazy">
+        <div class="media-container" onclick="window.savePostData(${JSON.stringify(post).replace(/"/g, '&quot;')}); window.navigateToPost('${post.id}', '${title.replace(/'/g, "\\'")}');">
+            <img data-src="${image}" src="data:image/png;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy-img" alt="${title}">
         </div>
         <div class="card-content">
-            <div class="text-area" onclick="window.savePostData(${JSON.stringify(post).replace(/"/g, '&quot;')}); window.navigateToPost('${post.id}', '${post.title}');">
+            <div class="text-area" onclick="window.savePostData(${JSON.stringify(post).replace(/"/g, '&quot;')}); window.navigateToPost('${post.id}', '${title.replace(/'/g, "\\'")}');">
                 <div class="title-box">
-                    <div class="post-title">${post.title}</div>
+                    <div class="post-title">${title}</div>
                 </div>
                 <div class="excerpt-box">
-                    <div class="post-excerpt">${post.excerpt || post.description || 'Discover this cinematic masterpiece...'}</div>
+                    <div class="post-excerpt">${excerpt}</div>
                 </div>
             </div>
             <div class="card-footer-info">
@@ -70,7 +80,7 @@ function renderPostCard(post) {
                 </div>
                 <div class="date-group">
                     <i class="fas fa-clock"></i>
-                    <span>${window.timeAgo(post.uploadTime)}</span>
+                    <span>${date}</span>
                 </div>
             </div>
         </div>
@@ -82,17 +92,21 @@ function renderPostCard(post) {
 function renderTallCard(post) {
     const card = document.createElement('div');
     card.className = 'tall-card';
+    const title = post.title || 'Untitled';
+    const image = post.mediaImage || '';
+    const date = post.uploadTime ? window.timeAgo(new Date(post.uploadTime).getTime()) : 'Recently';
+
     card.onclick = () => {
         window.savePostData(post);
-        window.navigateToPost(post.id, post.title);
+        window.navigateToPost(post.id, title);
     };
     
     card.innerHTML = `
         <div class="tall-card-image">
-            <img data-src="${post.mediaImage}" alt="${post.title}" loading="lazy">
+            <img data-src="${image}" src="data:image/png;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" class="lazy-img" alt="${title}">
         </div>
         <div class="tall-card-content">
-            <div class="tall-card-title">${post.title}</div>
+            <div class="tall-card-title">${title}</div>
             <div class="tall-card-footer">
                 <div class="tall-card-signature">
                     <svg viewBox="0 0 576 512" style="width:18px;height:18px;fill:var(--acc);">
@@ -101,8 +115,7 @@ function renderTallCard(post) {
                     <span>FILMIXO</span>
                 </div>
                 <div class="tall-card-date">
-                    <i class="fas fa-clock"></i>
-                    <span>${window.timeAgo(post.uploadTime)}</span>
+                    <span>${date}</span>
                 </div>
             </div>
         </div>
@@ -119,17 +132,20 @@ function loadBatch() {
     const endIndex = startIndex + window.CONFIG.POSTS_PER_BATCH;
     const batch = allPosts.slice(startIndex, endIndex);
 
+    const feedContainer = document.getElementById('feed-container');
+
     if (batch.length === 0) {
-        document.getElementById('sentinel').style.display = 'none';
-        const noMore = document.createElement('div');
-        noMore.style.cssText = 'text-align:center;padding:40px;color:var(--g);font-size:15px;';
-        noMore.textContent = '🎬 All content loaded';
-        document.getElementById('feed-container').appendChild(noMore);
+        if (document.getElementById('sentinel')) document.getElementById('sentinel').style.display = 'none';
+        if (batchTracker > 0 && !document.querySelector('.no-more-loader')) {
+            const noMore = document.createElement('div');
+            noMore.className = 'no-more-loader';
+            noMore.style.cssText = 'text-align:center;padding:40px;color:var(--g);font-size:15px;';
+            noMore.textContent = '🎬 All content loaded';
+            feedContainer.appendChild(noMore);
+        }
         isLoading = false;
         return;
     }
-
-    const feedContainer = document.getElementById('feed-container');
     
     batch.forEach(post => {
         const card = renderPostCard(post);
@@ -137,14 +153,14 @@ function loadBatch() {
         displayedPosts.push(post);
     });
 
-    window.initLazyLoading();
+    if (window.initLazyLoading) window.initLazyLoading();
     batchTracker++;
     isLoading = false;
 }
 
 // ========== RENDER TALL CARDS SECTION ==========
 function renderTallCardsSection() {
-    // Start from 3rd post (index 2) for tall cards
+    // ২ নম্বর ইনডেক্স থেকে ১২ নম্বর পর্যন্ত ১০টি কার্ড হরিজন্টাল স্ক্রলে যাবে
     tallCardsPosts = allPosts.slice(2, 12);
     
     if (tallCardsPosts.length === 0) return;
@@ -163,15 +179,17 @@ function renderTallCardsSection() {
     `;
 
     const feedContainer = document.getElementById('feed-container');
-    feedContainer.parentNode.insertBefore(tallCardsSection, feedContainer);
+    if (feedContainer && feedContainer.parentNode) {
+        feedContainer.parentNode.insertBefore(tallCardsSection, feedContainer);
 
-    const tallCardsGrid = document.getElementById('tall-cards-grid');
-    tallCardsPosts.forEach(post => {
-        const card = renderTallCard(post);
-        tallCardsGrid.appendChild(card);
-    });
+        const tallCardsGrid = document.getElementById('tall-cards-grid');
+        tallCardsPosts.forEach(post => {
+            const card = renderTallCard(post);
+            tallCardsGrid.appendChild(card);
+        });
+    }
 
-    window.initLazyLoading();
+    if (window.initLazyLoading) window.initLazyLoading();
 }
 
 // ========== SETUP INFINITE SCROLL OBSERVER ==========
@@ -194,9 +212,10 @@ function setupInfiniteScroll() {
 
 // ========== MANUAL LOAD MORE ==========
 window.handleManualLoad = function() {
-    document.getElementById('load-more-section').style.display = 'none';
+    const loadMoreSection = document.getElementById('load-more-section');
+    if (loadMoreSection) loadMoreSection.style.display = 'none';
     const sentinel = document.getElementById('sentinel');
-    sentinel.style.display = 'flex';
+    if (sentinel) sentinel.style.display = 'flex';
     batchTracker = 0;
     loadBatch();
     setupInfiniteScroll();
@@ -222,55 +241,58 @@ function generateHomepageSEO(totalPosts) {
         `Unlocking the vision: Professional cinematic forensics of ${totalPosts}+ trending blockbusters. We analyze artistic risks, multi-locale production leakages, and the strategic positioning of ${topMovies} in today's market.`
     ];
 
-    const selectedTitle = window.getRandomElement(titleVariations);
-    const selectedDesc = window.getRandomElement(descVariations);
+    const selectedTitle = window.getRandomElement ? window.getRandomElement(titleVariations) : titleVariations[0];
+    const selectedDesc = window.getRandomElement ? window.getRandomElement(descVariations) : descVariations[0];
 
     document.title = selectedTitle;
-    window.updateMetaTag('meta[name="description"]', 'content', selectedDesc);
-    window.updateMetaTag('meta[name="keywords"]', 'content', 
-        `cinematic forensics, strategic market positioning, filmixo industry analysis, subscription retention metrics, production dynamics, ${topMovies}, cinematic economics 2026`);
+    if (window.updateMetaTag) {
+        window.updateMetaTag('meta[name="description"]', 'content', selectedDesc);
+        window.updateMetaTag('meta[name="keywords"]', 'content', 
+            `cinematic forensics, strategic market positioning, filmixo industry analysis, subscription retention metrics, production dynamics, ${topMovies}, cinematic economics 2026`);
 
-    window.updateCanonical(window.location.origin + window.location.pathname);
+        window.updateCanonical(window.location.origin + window.location.pathname);
 
-    window.updateMetaTag('meta[property="og:title"]', 'content', selectedTitle);
-    window.updateMetaTag('meta[property="og:description"]', 'content', selectedDesc);
-    window.updateMetaTag('meta[property="og:url"]', 'content', window.location.href);
-    window.updateMetaTag('meta[name="twitter:title"]', 'content', selectedTitle);
-    window.updateMetaTag('meta[name="twitter:description"]', 'content', selectedDesc);
+        window.updateMetaTag('meta[property="og:title"]', 'content', selectedTitle);
+        window.updateMetaTag('meta[property="og:description"]', 'content', selectedDesc);
+        window.updateMetaTag('meta[property="og:url"]', 'content', window.location.href);
+        window.updateMetaTag('meta[name="twitter:title"]', 'content', selectedTitle);
+        window.updateMetaTag('meta[name="twitter:description"]', 'content', selectedDesc);
+    }
 
-    const schemaData = {
-        "@context": "https://schema.org",
-        "@graph": [
-            {
-                "@type": "WebSite",
-                "@id": window.location.origin + "/#website",
-                "url": window.location.origin,
-                "name": "FILMIXO",
-                "description": selectedDesc,
-                "inLanguage": "en-US",
-                "publisher": {
-                    "@type": "Organization",
-                    "name": "FILMIXO Editorial & Research",
-                    "logo": {
-                        "@type": "ImageObject",
-                        "url": "https://filmixo.vercel.app/thumbel/filmixo.jpeg"
+    if (window.updateSchema) {
+        const schemaData = {
+            "@context": "https://schema.org",
+            "@graph": [
+                {
+                    "@type": "WebSite",
+                    "@id": window.location.origin + "/#website",
+                    "url": window.location.origin,
+                    "name": "FILMIXO",
+                    "description": selectedDesc,
+                    "inLanguage": "en-US",
+                    "publisher": {
+                        "@type": "Organization",
+                        "name": "FILMIXO Editorial & Research",
+                        "logo": {
+                            "@type": "ImageObject",
+                            "url": "https://filmixo.vercel.app/thumbel/filmixo.jpeg"
+                        }
+                    }
+                },
+                {
+                    "@type": "CollectionPage",
+                    "@id": window.location.origin + "/#collection",
+                    "name": "Cinematic Analysis Archive",
+                    "mainEntity": {
+                        "@type": "ItemList",
+                        "numberOfItems": totalPosts,
+                        "itemListOrder": "https://schema.org/ItemListOrderDescending"
                     }
                 }
-            },
-            {
-                "@type": "CollectionPage",
-                "@id": window.location.origin + "/#collection",
-                "name": "Cinematic Analysis Archive",
-                "mainEntity": {
-                    "@type": "ItemList",
-                    "numberOfItems": totalPosts,
-                    "itemListOrder": "https://schema.org/ItemListOrderDescending"
-                }
-            }
-        ]
-    };
-
-    window.updateSchema(schemaData, 'homepage-schema');
+            ]
+        };
+        window.updateSchema(schemaData, 'homepage-schema');
+    }
 }
 
 // ========== UPDATE STATS BAR ==========
@@ -308,7 +330,7 @@ async function initHomePage() {
             setInterval(updateStatsBar, 5000);
         } else {
             const feedContainer = document.getElementById('feed-container');
-            feedContainer.innerHTML = '<p style="text-align:center;color:var(--g);padding:40px;">No posts available</p>';
+            if (feedContainer) feedContainer.innerHTML = '<p style="text-align:center;color:var(--g);padding:40px;">No posts available</p>';
         }
 
     } catch (error) {
@@ -331,4 +353,4 @@ export {
     generateHomepageSEO 
 };
 
-console.log('🏠 FILMIXO Home Manager Loaded');
+console.log('🏠 FILMIXO Home Manager Loaded Successfully');
